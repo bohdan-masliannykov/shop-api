@@ -1,11 +1,16 @@
 import Product from "../models/product.js";
 import { getErrorMessage } from "../utils/getErrorMessage.util.js";
 
-const getProducts = async (req, res) => {
-  res.send("Get all products");
+const getProducts = async (req, res, next) => {
+  try {
+    const products = await Product.find();
+    res.json({ records: products, total: products.length });
+  } catch (error) {
+    next();
+  }
 };
 
-const getProductById = async (req, res) => {
+const getProductById = async (req, res, next) => {
   const { id } = req.params;
 
   try {
@@ -16,12 +21,11 @@ const getProductById = async (req, res) => {
     }
     res.json(product);
   } catch (error) {
-    console.log(error);
-    res.status(500).send("Server error");
+    next();
   }
 };
 
-const createProduct = async (req, res) => {
+const createProduct = async (req, res, next) => {
   const { name, price, description } = req.body;
 
   try {
@@ -34,21 +38,46 @@ const createProduct = async (req, res) => {
     await newProduct.save();
     res.status(201).json(newProduct);
   } catch (error) {
-    console.log(error);
     if (error.name === "ValidationError") {
       return res.status(400).json({
         statusCode: 400,
         message: getErrorMessage(error.message),
       });
     }
-    res.status(500).send("Server error");
+    next();
   }
 };
-const updateProduct = async (req, res) => {
-  res.send("Update product");
+
+const updateProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, price, description } = req.body;
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { name, price, description },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).send("Product not found");
+    }
+    res.json(product);
+  } catch (error) {
+    next();
+  }
 };
-const deleteProduct = async (req, res) => {
-  res.send("Delete product");
+
+const deleteProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findByIdAndDelete(id);
+    if (!product) {
+      return res.status(404).send("Product not found");
+    }
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    next();
+  }
 };
 
 export default {
