@@ -2,7 +2,6 @@ import User from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jws from "jsonwebtoken";
 import Cart from "../models/cart.js";
-import crypto from "crypto";
 import { AppError, throwError } from "../utils/appError.util.js";
 
 const verifyMergeCarts = async (req, res, user) => {
@@ -26,6 +25,13 @@ const login = async (req, res, next) => {
 
     if (!passwordMatch) {
       return throwError(400, "Wrong credentials");
+    }
+
+    if (!user?.verified) {
+      return throwError(
+        403,
+        "Please verify your e-mail address to continue using the system!"
+      );
     }
 
     const token = jws.sign({ userId: user._id }, process.env.JWT_SECRET, {
@@ -70,7 +76,7 @@ const register = async (req, res, next) => {
     const verificationToken = user.generateVerificationToken();
     await user.save();
 
-    //TODO something with verificationToken
+    //TODO something with verificationToken (send the link by e-mail mb)
     res.status(201).json({ message: "User has been successfully created!" });
   } catch (error) {
     //TODO verify how error handlers work in MongoDB
@@ -94,11 +100,7 @@ const verifyEmail = async (req, res, next) => {
       return throwError(400, "Invalid or expired verification token");
     }
 
-    user.verified = true;
-    user.verificationExpires = null;
-    user.verificationToken = null;
-
-    await user.save();
+    await user.vefiryUserEmail();
 
     res.status(200).json({ message: "E-mail verified successfully!" });
   } catch (error) {
@@ -107,24 +109,65 @@ const verifyEmail = async (req, res, next) => {
 };
 
 const sendUserVerification = async (req, res, next) => {
-  // 1. get users email
+  // 1. get user email
   // 2. search for the user in db
   // 3. generate new verification token and expiration token
   // 4. send the link by e-mail
+
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (user) {
-      user.generateVerificationToken();
-      await user.save();
+    if (!user?.verified) {
+      await user.generateVerificationToken();
     }
 
-    console.log(user);
-    // TODO send rate-limit
+    //TODO send rate-limit
     //TODO send verification link
     res.status(200).json({
       message:
         "If your account exists, you will soon receive an email with a verification link!",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetExpires: { $gt: Date.now() },
+    });
+
+    if (user) {
+      await user.updatePassword(password);
+      return res
+        .status(200)
+        .json({ message: "Password successfully has been updated!" });
+    }
+
+    return throwError(400, "Invalid or expired reset token!");
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendUserPasswordReset = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (user) {
+      await user.generateResetToken();
+    }
+
+    //TODO send rate-limit
+    //TODO send verification link
+    res.status(200).json({
+      message:
+        "If your account exists, you will soon receive an email with a reset link!",
     });
   } catch (error) {
     next(error);
@@ -136,6 +179,8 @@ export default {
   logout,
   register,
   getPersonalData,
-  verifyEmail,
   sendUserVerification,
+  sendUserPasswordReset,
+  verifyEmail,
+  resetPassword,
 };

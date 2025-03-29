@@ -13,4 +13,8 @@ router.post("/logout", AuthController.logout);
 router.post("/verify-email", AuthController.verifyEmail);
 router.post("/verify-retry", AuthController.sendUserVerification);
 
+// TODO test
+router.post("/reset-password", AuthController.sendUserPasswordReset);
+router.post("/set-password", AuthController.resetPassword);
+
 export default router;
