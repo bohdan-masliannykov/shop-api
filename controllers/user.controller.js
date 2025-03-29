@@ -1,5 +1,6 @@
 import User from "../models/user.js";
 import bcrypt from "bcryptjs";
+import { throwError } from "../utils/appError.util.js";
 
 const createUser = async (req, res, next) => {
   try {
@@ -16,22 +17,20 @@ const createUser = async (req, res, next) => {
     await user.save();
     res.status(201).json({ message: "User has been created!" });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
 const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    const user = await User.findById(id);
+    const user = await User.findById(id).select("-password");
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return throwError(404, "User not found!");
     }
-
     res.json(user);
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
@@ -40,7 +39,7 @@ const updateUser = async (req, res, next) => {
     const { id } = req.params;
     const { name, email, password, role } = req.body;
 
-    const user = await User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
       id,
       { name, email, password, role },
       { new: true }
@@ -48,7 +47,7 @@ const updateUser = async (req, res, next) => {
 
     res.status(201).json({ message: "User has been created!" });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
@@ -57,11 +56,11 @@ const deleteUser = async (req, res, next) => {
     const { id } = req.params;
     const user = await User.findByIdAndDelete(id);
     if (!user) {
-      return res.status(400).json({ message: "User not found!" });
+      return throwError(404, "User not found!");
     }
     res.status(201).json({ message: "User has been deleted!" });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 

@@ -1,28 +1,40 @@
 import Cart from "../models/cart.js";
+import { throwError } from "../utils/appError.util.js";
+import getUserId from "../utils/getUserId.util.js";
 
 const getCart = async (req, res, next) => {
   try {
-    //todo add userId to request object
-    const mockUserId = "60f1b3b6f3f4f3b3b4b3b4b3";
-    const cart = await Cart.findOne({ userId: mockUserId })
-      .populate("items.productId")
-      .lean();
-    res.json(cart);
+    const userId = getUserId(req);
+
+    const cart = await Cart.findOne({ userId })
+      .select("items")
+      .populate("items.productId");
+
+    res.json({ items: cart?.items || [] });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
 const addToCart = async (req, res, next) => {
   try {
-    //todo add userId to request object
-    const mockUserId = "60f1b3b6f3f4f3b3b4b3b4b3";
-    const { productId, quantity } = req.body;
-    let cart = await Cart.findOne({ userId: mockUserId });
+    let userId = getUserId(req);
 
+    if (!userId) {
+      userId = `guest_${Date.now()}`;
+      res.cookie("guestId", userId, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 3600000,
+      });
+    }
+
+    const { productId, quantity } = req.body;
+
+    let cart = await Cart.findOne({ userId });
     if (!cart) {
       cart = new Cart({
-        userId: mockUserId,
+        userId,
         items: [],
       });
     }
@@ -39,16 +51,16 @@ const addToCart = async (req, res, next) => {
     await cart.save();
     res.json(cart);
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
 const removeFromCart = async (req, res, next) => {
   try {
-    //todo add userId to request object
-    const mockUserId = "60f1b3b6f3f4f3b3b4b3b4b3";
+    const userId = getUserId(req);
+
     const { productId } = req.body;
-    const cart = await Cart.findOne({ userId: mockUserId });
+    const cart = await Cart.findOne({ userId });
     const itemIndex = cart.items.findIndex(
       (item) => item.productId.toString() === productId
     );
@@ -62,10 +74,10 @@ const removeFromCart = async (req, res, next) => {
       await cart.save();
       return res.status(200).json(cart);
     } else {
-      return res.status(404).json({ message: "Item not found in cart" });
+      return throwError(404, "Item not found in cart");
     }
   } catch (error) {
-    next();
+    next(error);
   }
 };
 

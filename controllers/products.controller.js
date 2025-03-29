@@ -1,4 +1,5 @@
 import Product from "../models/product.js";
+import { throwError } from "../utils/appError.util.js";
 import { getErrorMessage } from "../utils/getErrorMessage.util.js";
 
 const getProducts = async (req, res, next) => {
@@ -6,7 +7,7 @@ const getProducts = async (req, res, next) => {
     const products = await Product.find();
     res.json({ records: products, total: products.length });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
@@ -17,11 +18,11 @@ const getProductById = async (req, res, next) => {
     const product = await Product.findById(id);
 
     if (!product) {
-      return res.status(404).send("Product not found");
+      return throwError(404, "Product not found");
     }
     res.json(product);
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
@@ -39,12 +40,9 @@ const createProduct = async (req, res, next) => {
     res.status(201).json(newProduct);
   } catch (error) {
     if (error.name === "ValidationError") {
-      return res.status(400).json({
-        statusCode: 400,
-        message: getErrorMessage(error.message),
-      });
+      return throwError(400, getErrorMessage(error.message));
     }
-    next();
+    next(error);
   }
 };
 
@@ -59,11 +57,11 @@ const updateProduct = async (req, res, next) => {
     );
 
     if (!product) {
-      return res.status(404).send("Product not found");
+      return throwError(404, "Product not found");
     }
     res.json(product);
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
@@ -72,11 +70,11 @@ const deleteProduct = async (req, res, next) => {
     const { id } = req.params;
     const product = await Product.findByIdAndDelete(id);
     if (!product) {
-      return res.status(404).send("Product not found");
+      return throwError(404, "Product not found");
     }
-    res.json({ message: "Product deleted successfully" });
+    res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
-    next();
+    next(error);
   }
 };
 
