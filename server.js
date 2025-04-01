@@ -6,6 +6,7 @@ import swaggerUI from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
 
 import authRoutes from "./routes/auth.routes.js";
+import orderRoutes from "./routes/order.routes.js";
 import productsRouter from "./routes/product.routes.js";
 import cartRouter from "./routes/cart.routes.js";
 import userRouter from "./routes/user.routes.js";
@@ -25,6 +26,7 @@ app.use(cookieParser());
 app.use("/docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 app.use(authRoutes);
+app.use(orderRoutes);
 app.use("/products", productsRouter);
 app.use("/cart", cartRouter);
 app.use("/users", userRouter);

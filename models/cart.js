@@ -19,6 +19,11 @@ const CartSchema = new mongoose.Schema(
   }
 );
 
+CartSchema.methods.emptyCart = async function () {
+  this.items = [];
+  return this.save();
+};
+
 const Cart = mongoose.model("Cart", CartSchema);
 
 export default Cart;
