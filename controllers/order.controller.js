@@ -1,10 +1,15 @@
 import Cart from "../models/cart.js";
 import User from "../models/user.js";
 import Order from "../models/order.js";
-
+import dotenv from "dotenv";
 import { throwError } from "../utils/appError.util.js";
 import { isGuest } from "../utils/isGuest.util.js";
 import getUserId from "../utils/getUserId.util.js";
+
+import Stripe from "stripe";
+dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_API_KEY);
 
 const createOrder = async (req, res, next) => {
   try {
@@ -56,8 +61,19 @@ const createOrder = async (req, res, next) => {
     await cart.emptyCart();
 
     //start payment process
-
-    res.status(200).json({ message: "Order has been created!" });
+    //TODO finish
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+    //   line_items: [{}],
+      mode: "payment",
+      success_url: "http://example",
+      cancel_url: "http://example",
+    });
+     
+    console.log(session.url);
+    res
+      .status(200)
+      .json({ message: "Order has been created!", url: session.url });
   } catch (error) {
     next(error);
   }
